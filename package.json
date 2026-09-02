@@ -4,17 +4,17 @@
   "version": "0.4.0",
   "packageManager": "pnpm@10.15.0",
   "scripts": {
-    "dev": "concurrently -n api,worker,web \"pnpm --filter @prospecting/api dev\" \"pnpm --filter @prospecting/worker dev\" \"pnpm --filter @prospecting/web dev\"",
+    "predev": "node --env-file=.env scripts/predev.mjs",
+    "dev": "concurrently -k -n api,worker,web -c blue,magenta,green \"pnpm --filter @prospecting/api dev\" \"pnpm --filter @prospecting/worker dev\" \"pnpm --filter @prospecting/web dev\"",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @prospecting/db generate",
-    "db:migrate": "pnpm --filter @prospecting/db migrate",
+    "db:migrate": "node --env-file=.env scripts/db-migrate.mjs",
     "db:seed": "pnpm --filter @prospecting/db seed",
     "validate": "node scripts/validate-repo.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "dotenv-cli": "^8.0.0",
     "typescript": "^5.9.2"
   }
 }
