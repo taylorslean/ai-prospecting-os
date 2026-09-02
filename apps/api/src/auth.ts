@@ -19,7 +19,7 @@ export const tokenHash = (s: string) =>
   crypto.createHash("sha256").update(s).digest("hex");
 
 export async function issueToken(app: FastifyInstance, userId: string, organizationId: string, role: string) {
-  return (app as any).jwt.sign({ sub: userId, organizationId, role }, { expiresIn: "15m" });
+  return (app as any).jwt.sign({ sub: userId, organizationId, role }, { expiresIn: "7d" });
 }
 
 export async function authContext(req: FastifyRequest, db: PrismaClient) {
