@@ -1,0 +1,11 @@
+import {z} from "zod";
+export const campaignInputSchema=z.object({name:z.string().min(2).max(120),query:z.string().min(2).max(500),location:z.string().min(2).max(200),offer:z.string().min(2).max(1000),maxResults:z.number().int().min(1).max(5000).default(100)});
+export const registerSchema=z.object({name:z.string().min(2).max(120),email:z.string().email(),password:z.string().min(10).max(200),organizationName:z.string().min(2).max(120)});
+export const loginSchema=z.object({email:z.string().email(),password:z.string().min(1)});
+export type BusinessRecord={externalId?:string;name:string;category?:string;address?:string;phone?:string;website?:string;rating?:number;reviews?:number;source:string;sourceUrl?:string;raw?:unknown};
+export const normalizeName=(v="")=>v.toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+export const normalizePhone=(v="")=>v.replace(/[^\d+]/g,"").replace(/^00/,"+");
+export const normalizeDomain=(v="")=>{try{return new URL(v.startsWith("http")?v:`https://${v}`).hostname.replace(/^www\./,"").toLowerCase()}catch{return v.toLowerCase().replace(/^www\./,"").split("/")[0]}};
+export function calculateLeadScore(i:{hasWebsite:boolean;hasEmail:boolean;emailType:"business"|"generic"|"none";opportunityCount:number;decisionMakerSignal:number;companyResearchQuality:number;rating?:number;reviews?:number}){let s=0;if(i.hasWebsite)s+=10;if(i.hasEmail)s+=i.emailType==="business"?20:10;s+=Math.min(i.opportunityCount*10,25);s+=Math.min(Math.max(i.decisionMakerSignal,0),20);s+=Math.min(Math.max(i.companyResearchQuality,0),15);if((i.rating??0)>=4)s+=5;if((i.reviews??0)>=50)s+=5;return Math.min(s,100)}
+export function detectOpportunities(offer:string,text:string){const t=(text||"").toLowerCase(),rules:[RegExp,string][]=[[/facebook|instagram|tiktok|social media/,"social media growth"],[/coming soon|under construction|no website/,"website modernization"],[/booking|appointment|reserve/,"booking automation"],[/whatsapp|messenger|chat us/,"conversational sales"],[/google reviews|reviews/,"review/reputation"],[/menu|catalog|services/,"conversion optimization"]];return rules.filter(([r])=>r.test(t)).map(([,x])=>`${x} aligned to ${offer}`).slice(0,8)}
+export const classifyEmail=(e:string):"business"|"generic"|"none"=>!e?"none":/^(info|hello|contact|admin|support|sales|office|booking)@/i.test(e)?"generic":"business";

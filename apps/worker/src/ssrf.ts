@@ -1,0 +1,3 @@
+import dns from"node:dns/promises";import net from"node:net";
+function blocked(ip:string){const p=ip.split(".").map(Number);if(net.isIPv4(ip))return p[0]===10||p[0]===127||p[0]===169&&p[1]===254||p[0]===192&&p[1]===168||p[0]===172&&p[1]>=16&&p[1]<=31;return ip==="::1"||ip.startsWith("fc")||ip.startsWith("fd")||ip.startsWith("fe80:")}
+export async function assertSafeUrl(raw:string){const u=new URL(raw);if(!["http:","https:"].includes(u.protocol))throw new Error("blocked_protocol");const addrs=await dns.lookup(u.hostname,{all:true});if(addrs.some(x=>blocked(x.address)))throw new Error("blocked_private_network");return u}

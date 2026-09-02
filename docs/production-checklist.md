@@ -1,0 +1,21 @@
+# V0.4 Production Checklist
+- [x] RBAC
+- [x] Argon2id
+- [x] session persistence/revocation
+- [x] API key hashing/revocation
+- [x] rate limiting
+- [x] audit log
+- [x] usage limits
+- [x] scheduled campaign foundation
+- [x] suppression foundation
+- [x] billing/subscription data model
+- [x] webhook delivery data model
+- [ ] email verification/reset/MFA
+- [ ] CSRF protection for cookie auth
+- [ ] KMS/secret manager
+- [ ] complete SSRF-safe crawler + redirect checks
+- [ ] cron parser/timezone engine
+- [ ] CRM adapters
+- [ ] observability
+- [ ] E2E/load/security tests
+- [ ] production deployment manifests

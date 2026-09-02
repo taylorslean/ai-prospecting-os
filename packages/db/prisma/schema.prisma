@@ -1,0 +1,397 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum Plan {
+  FREE
+  STARTER
+  GROWTH
+  PRO
+  AGENCY
+  ENTERPRISE
+}
+
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  CONTACTED
+  REPLIED
+  WON
+  LOST
+}
+
+enum OpportunityStatus {
+  OPEN
+  DISMISSED
+  CONVERTED
+}
+
+model Organization {
+  id                String            @id
+  name              String
+  plan              Plan              @default(FREE)
+  createdAt         DateTime          @default(now())
+  memberships       Membership[]
+  campaigns         Campaign[]
+  businesses        Business[]
+  integrations      Integration[]
+  usageEvents       UsageEvent[]
+  apiKeys           ApiKey[]
+  auditLogs         AuditLog[]
+  sessions          Session[]
+  invitations       Invitation[]
+  suppressions      Suppression[]
+  subscription      Subscription?
+  webhookDeliveries WebhookDelivery[]
+}
+
+model User {
+  id              String       @id
+  email           String       @unique
+  name            String
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  createdAt       DateTime     @default(now())
+  memberships     Membership[]
+  auditLogs       AuditLog[]
+  sessions        Session[]
+}
+
+model Membership {
+  id             String       @id
+  userId         String
+  organizationId String
+  role           UserRole     @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model Campaign {
+  id             String           @id
+  organizationId String
+  name           String
+  query          String
+  location       String
+  offer          String
+  maxResults     Int              @default(100)
+  status         CampaignStatus   @default(DRAFT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobs           CrawlJob[]
+  schedule       CampaignSchedule?
+}
+
+model Business {
+  id             String           @id
+  organizationId String
+  externalId     String?
+  name           String
+  normalizedName String
+  category       String?
+  address        String?
+  phone          String?
+  website        String?
+  domain         String?
+  rating         Float?
+  reviews        Int?
+  source         String
+  sourceUrl      String?
+  status         LeadStatus       @default(NEW)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts       Contact[]
+  websiteData    WebsiteData?
+  evidences      Evidence[]
+  research       CompanyResearch?
+  opportunities  Opportunity[]
+  leadScore      LeadScore?
+  syncEvents     SyncEvent[]
+
+  @@unique([organizationId, normalizedName, domain])
+}
+
+model Contact {
+  id         String   @id
+  businessId String
+  name       String?
+  title      String?
+  email      String?
+  phone      String?
+  sourceUrl  String?
+  confidence Float    @default(0)
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model WebsiteData {
+  id          String   @id
+  businessId  String   @unique
+  url         String
+  title       String?
+  description String?
+  text        String?
+  statusCode  Int?
+  crawledAt   DateTime @default(now())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Evidence {
+  id         String   @id
+  businessId String
+  type       String
+  url        String?
+  quote      String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model CompanyResearch {
+  id             String   @id
+  businessId     String   @unique
+  summary        String?
+  decisionMakers Json?
+  technology     Json?
+  signals        Json?
+  quality        Int      @default(0)
+  provider       String
+  updatedAt      DateTime @updatedAt
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Opportunity {
+  id          String            @id
+  businessId  String
+  type        String
+  title       String
+  description String
+  status      OpportunityStatus @default(OPEN)
+  confidence  Float             @default(0)
+  createdAt   DateTime          @default(now())
+  business    Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, status])
+}
+
+model LeadScore {
+  id         String   @id
+  businessId String   @unique
+  score      Int
+  reasons    Json
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model CrawlJob {
+  id         String    @id
+  campaignId String
+  status     JobStatus @default(QUEUED)
+  attempts   Int       @default(0)
+  error      String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+}
+
+model Integration {
+  id                String            @id
+  organizationId    String
+  type              String
+  endpoint          String
+  secretEncrypted   String?
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  syncEvents        SyncEvent[]
+  webhookDeliveries WebhookDelivery[]
+}
+
+model SyncEvent {
+  id            String      @id
+  businessId    String
+  integrationId String
+  status        String
+  responseCode  Int?
+  error         String?
+  createdAt     DateTime    @default(now())
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+}
+
+model UsageEvent {
+  id             String       @id
+  organizationId String
+  kind           String
+  units          Int          @default(1)
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+}
+
+model ApiKey {
+  id             String       @id
+  organizationId String
+  name           String
+  prefix         String
+  keyHash        String       @unique
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             String       @id
+  organizationId String
+  userId         String?
+  action         String
+  entity         String?
+  entityId       String?
+  ip             String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
+
+model IdempotencyKey {
+  id             String   @id
+  organizationId String
+  key            String
+  requestHash    String
+  responseJson   Json?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, key])
+}
+
+model Session {
+  id             String       @id
+  userId         String
+  organizationId String
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, organizationId])
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  email          String
+  role           UserRole     @default(MEMBER)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email])
+}
+
+model Suppression {
+  id             String       @id
+  organizationId String
+  email          String?
+  domain         String?
+  phone          String?
+  reason         String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email])
+  @@index([organizationId, domain])
+}
+
+model CampaignSchedule {
+  id         String    @id
+  campaignId String    @unique
+  cron       String
+  timezone   String    @default("UTC")
+  active     Boolean   @default(true)
+  nextRunAt  DateTime?
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  campaign   Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                     String       @id
+  organizationId         String       @unique
+  provider               String
+  customerId             String?
+  externalSubscriptionId String?
+  priceId                String?
+  status                 String
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model WebhookDelivery {
+  id             String       @id
+  organizationId String
+  integrationId  String
+  eventType      String
+  payload        Json
+  signature      String?
+  status         String       @default("QUEUED")
+  attempts       Int          @default(0)
+  responseCode   Int?
+  error          String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration    Integration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+}
