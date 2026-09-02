@@ -4,8 +4,7 @@
   "version": "0.4.0",
   "packageManager": "pnpm@10.15.0",
   "scripts": {
-    "predev": "node --env-file=.env scripts/predev.mjs",
-    "dev": "concurrently -k -n api,worker,web -c blue,magenta,green \"pnpm --filter @prospecting/api dev\" \"pnpm --filter @prospecting/worker dev\" \"pnpm --filter @prospecting/web dev\"",
+    "dev": "node scripts/dev.mjs",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @prospecting/db generate",
